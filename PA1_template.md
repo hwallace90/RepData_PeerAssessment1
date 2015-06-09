@@ -2,7 +2,9 @@
 
 
 ## Loading and preprocessing the data
-<br>
+
+Here we set our working directory, unzip the zip file, and use the read.csv function to put the csv into a dataframe
+
 
 
 ```r
@@ -11,9 +13,9 @@ unzip('activity.zip')
 activity <- read.csv('activity.csv')
 ```
   
-<br>
+
 These are the summary statistics of our resulting activity dataframe  
-<br>
+
   
 
 ```r
@@ -34,9 +36,9 @@ summary(activity)
 
 ## What is mean total number of steps taken per day?
 
-<br>
-We're going to use the dplyr package to group the results by each day. 
-<br>
+
+We're going to use the dplyr package to group the results by each day.
+
 
 
 ```r
@@ -56,9 +58,10 @@ library(dplyr)
 ##     intersect, setdiff, setequal, union
 ```
 
-<br>
-The table total_steps will have each day and the total number of steps taken during the course of that day
-<br>
+
+The dataframe total_steps will have each day and the total number of steps taken during the course of that day. 
+This is done through the group_by function that is found in the dplyr package.
+
 
 
 ```r
@@ -69,9 +72,9 @@ hist(total_steps$steps, xlab = 'Steps Taken Per Day', main = 'Histogram of Steps
 
 ![](PA1_template_files/figure-html/unnamed-chunk-2-1.png) 
 
-<br>
+
 The summary will tell us the mean and median of steps per day.
-<br>
+
 
 
 ```r
@@ -89,12 +92,16 @@ summary(total_steps)
 ##  (Other)   :55   NA's   :8
 ```
 
-<br>
+
 On average, this person took 10,766 steps per day for each day that was recorded.   
 The median is very similar, at 10,765 steps per day.
-<br>
+
 
 ## What is the average daily activity pattern?
+
+Instead of grouping by the day, instead this time we're going to group by the time interval, 
+because we want to see what parts of the day most of the steps are taken in.
+From there, we'll plot a the average number of steps per interval to see when most of the activity occurs.
 
 
 ```r
@@ -104,6 +111,9 @@ with(steps_time, plot(interval, steps_avg, type = 'l', main = 'Average Steps Tak
 ```
 
 ![](PA1_template_files/figure-html/unnamed-chunk-4-1.png) 
+
+We can see most of the activity occurs in the morning.
+We can find the max interval by subsetting the row equal to the max.
 
 
 ```r
@@ -117,7 +127,11 @@ steps_time[steps_time$steps_avg == max(steps_time$steps_avg),]
 ## 1      835  206.1698
 ```
 
+Interval 835 has the highest activity, probably walking to work or school.
+
 ## Imputing missing values
+
+There are a significant amount of NAs in the steps column as we can see from this summary function.
 
 
 ```r
@@ -135,6 +149,10 @@ summary(activity[apply(is.na(activity), 1, any), ])
 ##  NA's   :2304   (Other)   :576
 ```
 
+First we're going to left join to the steps_time table, which has our average number of steps for each interval.
+From there we can impute those NAs with the average number of steps for that interval.
+Finally, create another dataframe that drops the steps average per interval to avoid confusion.
+
 
 ```r
 activity2 <- left_join(activity, steps_time)
@@ -148,6 +166,9 @@ activity2 <- left_join(activity, steps_time)
 activity2[is.na(activity2$steps),1] <- activity2[is.na(activity2$steps),4]
 act.no.na <- activity2[,1:3]
 ```
+
+We can make a histogram of the new amount of steps per day. 
+It looks pretty similar to the histogram without the imputed values
 
 
 ```r
@@ -174,19 +195,41 @@ summary(total_steps2)
 ##  (Other)   :55
 ```
 
+The median is now exactly equal to the mean. The mean has stayed the same.
+Imputing NA values with the interval's average makes very little difference.
+
 ## Are there differences in activity patterns between weekdays and weekends?
+
+For this final question we're going to use the lattice package to make a graph comparing weekdays and weekends
+
+
+```r
+library(lattice)
+```
+
+First, we can take each date and determine what day of the week it is with the weekdays function.
+Then, those can be classified into weekends or weekdays.
+
+We can then make a line graph for the two types of days to see if there's a difference between weekdays and weekends.
+
 
 
 ```r
 activity$date <- as.Date(activity$date)
 activity$day <- weekdays(activity$date)
-activity$weekday <- activity$day %in% c('Saturday', 'Sunday')
+activity$weekday <- as.factor(ifelse(activity$day %in% c('Saturday','Sunday'), 'Weekend', 'Weekday'))
+
+by_time2 <- group_by(activity, interval, weekday)
+steps_time2 <- summarize(by_time2, steps_avg = mean(steps, na.rm = TRUE))
+
+with(steps_time2, xyplot(steps_avg ~ interval | weekday, layout = c(1,2), type = 'l'))
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-11-1.png) 
 
 
-
-
+Conclusion: The distribution of steps is much more even during the weekends than during the weekdays.
+This makes more sense, as the person might have an office job or be in class, which causes less walking during the middle of the day.
 
 
 
